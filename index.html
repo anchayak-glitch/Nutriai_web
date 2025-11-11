@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriSense AI: เครื่องมือวิเคราะห์มื้ออาหาร</title>
+    <!-- 1. Load Tailwind CSS from CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 2. Load Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 3. Load Kanit Font (Thai/English) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom CSS (Internal Styling) */
+        body {
+            font-family: 'Kanit', sans-serif; /* Use Kanit for Thai text */
+            background-color: #F8F9FA;
+        }
+        .card {
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.05);
+            padding: 24px;
+            transition: transform 0.3s ease;
+        }
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+        /* Loading Spinner Animation */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1967D2;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    
+    <div class="max-w-6xl mx-auto">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-[#1967D2] mb-2">🧠 NutriSense AI: วิเคราะห์โภชนาการ</h1>
+            <p class="text-gray-600 text-lg">เครื่องมือวิเคราะห์สารอาหารหลัก 5 ชนิดที่เสถียรและแม่นยำ</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Panel 1: Meal Input -->
+            <section class="lg:col-span-2 card border-t-4 border-[#4285F4]">
+                <h2 class="text-3xl font-bold mb-4 text-[#4285F4]">1. กรอกรายการอาหาร</h2>
+                
+                <div class="mb-6">
+                    <label for="mealInput" class="block text-sm font-medium text-gray-700 mb-2">
+                        ระบุรายการอาหารและปริมาณให้ชัดเจนที่สุด:
+                    </label>
+                    <textarea id="mealInput" rows="7" placeholder="ตัวอย่าง:&#10;ข้าวผัดกะเพราไก่ไข่ดาว (ใช้ไขมัน 2 ช้อนโต๊ะ)&#10;ชานมไข่มุกหวานน้อย (25% sugar) 1 แก้ว" class="w-full rounded-lg border border-gray-300 shadow-sm p-3 focus:ring-2 focus:ring-[#4285F4]"></textarea>
+                </div>
+
+                <button id="analyzeButton" onclick="analyzeMealList()" class="w-full bg-[#FBBC04] text-gray-900 font-bold py-3 rounded-lg hover:bg-yellow-500 transition duration-300 shadow-lg text-lg flex items-center justify-center">
+                    <span id="buttonText">🚀 วิเคราะห์มื้ออาหารรวมด้วย AI</span>
+                    <div id="loadingSpinner" class="loader ml-3 hidden"></div>
+                </button>
+                
+                <h3 class="text-xl font-semibold mt-6 mb-3 text-gray-700">รายการที่คุณป้อน:</h3>
+                <div id="confirmationList" class="max-h-60 overflow-y-auto space-y-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <p class="text-center text-gray-400 py-8 text-sm">รายการอาหารจะแสดงที่นี่เพื่อยืนยัน</p>
+                </div>
+
+            </section>
+
+            <!-- Panel 2: Analysis Summary -->
+            <section class="lg:col-span-1 card border-t-4 border-[#EA4335]">
+                <h2 class="text-3xl font-bold mb-6 text-[#EA4335]">2. ผลรวมพลังงาน</h2>
+                
+                <!-- Total Calories Display (Key Metric) -->
+                <div id="totalSummary" class="bg-gray-100 p-4 rounded-lg mb-6 text-center shadow-md">
+                    <p class="text-xl font-semibold text-gray-700">พลังงานรวม:</p>
+                    <p id="totalCalories" class="text-6xl font-extrabold text-[#EA4335] mt-1">0</p> 
+                    <p class="text-lg font-bold text-[#EA4335]">Kcal</p>
+                </div>
+
+                <div class="chart-container mb-6">
+                    <canvas id="nutritionRadarChart"></canvas>
+                </div>
+
+                <!-- Health Verdict -->
+                <div id="healthVerdict" class="p-4 rounded-lg text-white font-bold text-center text-lg shadow-inner bg-gray-400">
+                    รอผลการวิเคราะห์จาก AI
+                </div>
+
+            </section>
+        </div>
+
+        <!-- Panel 3: Detailed Breakdown and Advice (Full Width) -->
+        <section class="card mt-8 border-t-4 border-[#34A853]">
+            <h2 class="text-3xl font-bold mb-4 text-[#34A853]">3. รายละเอียดสารอาหารและคำแนะนำ</h2>
+            
+            <div id="detailedNutrients" class="mt-4 p-4 bg-blue-50 rounded-lg mb-6">
+                <h4 class="text-xl font-semibold text-[#1967D2] mb-3">รายละเอียดสารอาหารหลัก (แสดงผลรวมและ % ของปริมาณที่แนะนำต่อวัน):</h4>
+                <!-- Detailed Breakdown Grid -->
+                <div id="detailedList" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm font-medium">
+                    <p class="col-span-4 text-center text-gray-500">รอผลการวิเคราะห์</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Reduce Advice Panel -->
+                <div id="adviceReduce" class="p-4 rounded-xl border-2 border-red-300 bg-red-50">
+                    <h3 class="text-2xl font-bold text-red-600 mb-2 flex items-center">
+                        <span class="mr-2">🔻</span> คำแนะนำ: ลด/หลีกเลี่ยง
+                    </h3>
+                    <div id="reduceContent" class="text-gray-700 space-y-2">
+                        <p class="text-sm text-gray-500">รอผลการวิเคราะห์</p>
+                    </div>
+                </div>
+                
+                <!-- Increase Advice Panel -->
+                <div id="adviceIncrease" class="p-4 rounded-xl border-2 border-green-300 bg-green-50">
+                    <h3 class="text-2xl font-bold text-green-600 mb-2 flex items-center">
+                        <span class="mr-2">✅</span> คำแนะนำ: เพิ่ม/เสริม
+                    </h3>
+                    <div id="increaseContent" class="text-gray-700 space-y-2">
+                        <p class="text-sm text-gray-500">รอผลการวิเคราะห์</p>
+                    </div>
+                </div>
+            </div>
+            
+        </section>
+
+    </div>
+
+    <!-- JavaScript Logic (Includes data definitions and all UI/API handling functions) -->
+    <script>
+        // Set the endpoint for the Netlify Serverless Function (Backend)
+        // This MUST match the path to your analyze-nutri.js file (e.g., /api/analyze-nutri)
+        const BACKEND_ENDPOINT = '/api/analyze-nutri'; 
+        
+        // Define Daily Value limits (based on 2,000 Kcal)
+        const DAILY_LIMITS = {
+            satFat: 20,      // Saturated Fat (g)
+            sugar: 50,       // Sugar (g)
+            protein: 50,     // Protein (g)
+            sodium: 2400     // Sodium (mg)
+        };
+
+        const NUTRIENTS = [
+            { id: 'satFat', label: 'ไขมันอิ่มตัว', unit: 'g', limit: DAILY_LIMITS.satFat, color: '#EA4335' },
+            { id: 'sugar', label: 'น้ำตาล', unit: 'g', limit: DAILY_LIMITS.sugar, color: '#FBBC04' },
+            { id: 'protein', label: 'โปรตีน', unit: 'g', limit: DAILY_LIMITS.protein, color: '#34A853' },
+            { id: 'sodium', label: 'โซเดียม', unit: 'mg', limit: DAILY_LIMITS.sodium, color: '#4285F4' }
+        ];
+
+        let nutritionChart = null;
+        let totalNutrition = null;
+
+        // --- UTILITY FUNCTIONS ---
+
+        function setLoading(isLoading) {
+            const button = document.getElementById('analyzeButton');
+            const spinner = document.getElementById('loadingSpinner');
+            const buttonText = document.getElementById('buttonText');
+
+            if (button && spinner && buttonText) {
+                button.disabled = isLoading;
+                spinner.classList.toggle('hidden', !isLoading);
+                buttonText.textContent = isLoading ? 'กำลังวิเคราะห์...' : '🚀 วิเคราะห์มื้ออาหารรวมด้วย AI';
+            }
+        }
+
+        // Fetch wrapper with exponential backoff for resilience against rate limits
+        async function retryFetch(url, options, maxRetries = 3) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) {
+                        return response;
+                    }
+                    if (response.status === 429 && i < maxRetries - 1) { 
+                        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                    throw new Error(`Server failed with status: ${response.status}`);
+                } catch (error) {
+                    if (i === maxRetries - 1) {
+                        throw error;
+                    }
+                    const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
+        /**
+         * Core Function: Calls the *secured Backend Endpoint*
+         * @param {string} mealListText - The list of meals input by the user.
+         * @returns {Promise<Object>} - The normalized nutrition data.
+         */
+        async function fetchNutritionAnalysis(mealListText) {
+            
+            const payload = { mealText: mealListText };
+
+            try {
+                // CALLING THE BACKEND ENDPOINT
+                const response = await retryFetch(BACKEND_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                
+                if (result.error) {
+                    throw new Error(`ข้อผิดพลาดจาก Server: ${result.error}`);
+                }
+                
+                if (result.success && result.data) {
+                    const parsedJson = result.data;
+                    
+                    // Data Normalization and Validation
+                    const normalizedData = {
+                        calories: Number(parsedJson.calories) || 0,
+                        satFat: Number(parsedJson.satFat) || 0,
+                        sugar: Number(parsedJson.sugar) || 0,
+                        protein: Number(parsedJson.protein) || 0,
+                        sodium: Number(parsedJson.sodium) || 0,
+                    };
+
+                    if (normalizedData.calories > 0 || normalizedData.protein > 0 || normalizedData.sugar > 0) {
+                        return normalizedData;
+                    } else {
+                        // AI failed to return meaningful data
+                        throw new Error("AI ส่งค่าเป็น 0 โปรดระบุรายการอาหารให้ละเอียด");
+                    }
+                }
+                
+                throw new Error("ไม่สามารถรับข้อมูลโภชนาการที่ถูกต้องจาก Server ได้");
+
+            } catch (error) {
+                console.error("Backend Call Error:", error);
+                throw new Error(`การเชื่อมต่อล้มเหลว: ${error.message}. (โปรดตรวจสอบ Backend Log)`);
+            }
+        }
+
+        // --- UI LOGIC ---
+
+        // Main analysis handler
+        async function analyzeMealList() {
+            const mealInputText = document.getElementById('mealInput').value.trim();
+            if (!mealInputText) {
+                updateUIForError("กรุณากรอกรายการอาหารเพื่อเริ่มการวิเคราะห์");
+                return;
+            }
+
+            renderConfirmationList(mealInputText);
+            setLoading(true);
+
+            try {
+                const nutritionData = await fetchNutritionAnalysis(mealInputText);
+                totalNutrition = nutritionData;
+
+                const percentDVs = {};
+                NUTRIENTS.forEach(n => {
+                    const value = Number(totalNutrition[n.id]) || 0; 
+                    percentDVs[n.id] = (value / n.limit) * 100;
+                });
+
+                updateUI(totalNutrition, percentDVs);
+
+            } catch (error) {
+                updateUIForError(error.message || "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ");
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        // Render the meal list input by the user
+        function renderConfirmationList(mealInputText) {
+            const listElement = document.getElementById('confirmationList');
+            const items = mealInputText.split(/[\r\n]/).filter(item => item.trim().length > 0);
+            
+            if (!listElement) return;
+            
+            if (items.length === 0) {
+                 listElement.innerHTML = '<p class="text-center text-gray-400 py-8 text-sm">รายการอาหารจะแสดงที่นี่เพื่อยืนยัน</p>';
+                 return;
+            }
+
+            listElement.innerHTML = items.map(item => `
+                <div class="flex items-center p-2 rounded-lg bg-white border border-gray-200 shadow-sm">
+                    <span class="mr-3 text-[#34A853] font-bold text-lg">•</span>
+                    <p class="font-medium text-gray-800">${item.trim()}</p>
+                </div>
+            `).join('');
+        }
+
+        // Update all UI components with the analysis results
+        function updateUI(totalNutrition, percentDVs) {
+            document.getElementById('totalCalories').textContent = (totalNutrition.calories || 0).toFixed(0);
+
+            const chartDataValues = [];
+            const chartLabels = [];
+            const chartColors = [];
+            const detailedHtml = [];
+
+            NUTRIENTS.forEach(n => {
+                const value = totalNutrition[n.id] || 0;
+                const percent = percentDVs[n.id] || 0;
+
+                // Cap the value displayed on the chart to prevent it from skewing too much
+                chartDataValues.push(Math.min(percent, 150)); 
+                chartLabels.push(n.label);
+                chartColors.push(n.color);
+                
+                // Set color based on percentage of Daily Value
+                const textColor = percent > 50 ? '#EA4335' : (percent > 20 ? '#FBBC04' : '#34A853');
+                
+                detailedHtml.push(`
+                    <div class="flex justify-between p-2 rounded-md bg-white border border-gray-200">
+                        <span class="text-gray-600 font-bold">${n.label}</span>
+                        <span class="font-extrabold" style="color: ${textColor}">
+                            ${value.toFixed(1)} ${n.unit} (${percent.toFixed(0)}% DV)
+                        </span>
+                    </div>
+                `);
+            });
+
+            document.getElementById('detailedList').innerHTML = detailedHtml.join('');
+
+            updateRadarChart(chartDataValues, chartLabels, chartColors);
+            generateHealthAdvice(percentDVs);
+            
+            const verdictElement = document.getElementById('healthVerdict');
+            verdictElement.className = 'p-4 rounded-lg text-white font-bold text-center text-lg shadow-inner bg-green-500';
+            verdictElement.textContent = `🎉 วิเคราะห์เสร็จสมบูรณ์!`;
+        }
+
+        // Display error message to the user
+        function updateUIForError(message) {
+             const verdictElement = document.getElementById('healthVerdict');
+             verdictElement.className = 'p-4 rounded-lg text-white font-bold text-center text-lg shadow-inner bg-red-600';
+             verdictElement.textContent = `❌ ข้อผิดพลาด: ${message}`;
+             
+             document.getElementById('totalCalories').textContent = '0';
+             document.getElementById('detailedList').innerHTML = `<p class="col-span-4 text-center text-red-600 font-bold">${message}</p>`;
+             updateRadarChart([0, 0, 0, 0], NUTRIENTS.map(n => n.label), NUTRIENTS.map(n => n.color));
+             
+             document.getElementById('reduceContent').innerHTML = '<p class="text-sm text-red-700">ไม่สามารถวิเคราะห์ได้เนื่องจากข้อผิดพลาด</p>';
+             document.getElementById('increaseContent').innerHTML = '<p class="text-sm text-red-700">ไม่สามารถวิเคราะห์ได้เนื่องจากข้อผิดพลาด</p>';
+        }
+
+        // Generate simple health advice based on %DV
+        function generateHealthAdvice(percentDVs) {
+            const reduceContent = document.getElementById('reduceContent');
+            const increaseContent = document.getElementById('increaseContent');
+            
+            const reduceList = [];
+            const increaseList = [];
+            
+            // Logic to check for potential excesses (high values)
+            if (percentDVs.satFat > 35) { 
+                reduceList.push('ไขมันอิ่มตัวสูง: ลดเนื้อสัตว์ติดมัน, อาหารทอด หรือผลิตภัณฑ์ที่มีกะทิ/น้ำมันปาล์ม');
+            }
+            if (percentDVs.sugar > 30) {
+                reduceList.push('น้ำตาลสูง: พิจารณาลดเครื่องดื่มที่มีน้ำตาลสูง เช่น ชานมไข่มุก หรือน้ำผลไม้ที่เติมน้ำตาล');
+            }
+            if (percentDVs.sodium > 40) {
+                reduceList.push('โซเดียมสูง: ระวังอาหารสำเร็จรูป, อาหารแปรรูป, หรือลดปริมาณซอสปรุงรส');
+            }
+
+            // Logic to check for potential deficiencies (low values) and general recommendations
+            if (percentDVs.protein < 20) { 
+                increaseList.push('โปรตีนต่ำ: เพิ่มแหล่งโปรตีนที่ดีในมื้อถัดไป เช่น ไข่, ถั่ว, โยเกิร์ต, หรือเนื้อไม่ติดมัน');
+            }
+            increaseList.push('เพิ่มผัก/ใยอาหาร: เพื่อช่วยระบบขับถ่ายและเติมวิตามินที่จำเป็น');
+            
+            reduceContent.innerHTML = reduceList.length > 0 
+                ? reduceList.map(item => `<p class="flex items-start"><span class="mr-2 text-red-600 font-bold">•</span> ${item}</p>`).join('')
+                : '<p class="text-sm text-gray-500">มื้อนี้สมดุลดีแล้ว! ไม่มีรายการที่ต้องลดเป็นพิเศษ</p>';
+            
+            increaseContent.innerHTML = increaseList.map(item => `<p class="flex items-start"><span class="mr-2 text-green-600 font-bold">•</span> ${item}</p>`).join('');
+        }
+
+        // --- CHART LOGIC (Chart.js) ---
+
+        function updateRadarChart(data, labels, colors) {
+            const ctx = document.getElementById('nutritionRadarChart');
+            if (!ctx) return; 
+            
+            const chartData = {
+                labels: labels,
+                datasets: [{
+                    label: '% ปริมาณที่แนะนำต่อวัน (%DV)',
+                    data: data,
+                    backgroundColor: 'rgba(66, 133, 244, 0.5)', 
+                    borderColor: '#4285F4', 
+                    pointBackgroundColor: colors, 
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: colors,
+                    borderWidth: 2
+                }]
+            };
+
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(0, 0, 0, 0.1)' },
+                        grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                        pointLabels: {
+                            font: { size: 13, family: 'Kanit' },
+                            color: '#333'
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 100,
+                        ticks: {
+                            stepSize: 25,
+                            callback: function(value, index, values) { return value + '%'; },
+                            backdropColor: '#F8F9FA',
+                            color: '#666'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (context.parsed.r !== null) {
+                                    label += `: ${Math.round(context.parsed.r)}% DV`;
+                                }
+                                return label;
+                            },
+                            labelFont: { family: 'Kanit' },
+                            titleFont: { family: 'Kanit' }
+                        }
+                    }
+                }
+            };
+
+            if (nutritionChart) {
+                nutritionChart.data = chartData;
+                nutritionChart.options = chartOptions;
+                nutritionChart.update();
+            } else {
+                nutritionChart = new Chart(ctx, {
+                    type: 'radar',
+                    data: chartData,
+                    options: chartOptions
+                });
+            }
+        }
+        
+        // --- INITIALIZATION ---
+        function initializeApp() {
+            // Set initial placeholder text
+            const mealInput = document.getElementById('mealInput');
+            if (mealInput) {
+                mealInput.value = `ข้าวผัดกะเพราไก่ไข่ดาว 1 จาน\nชานมไข่มุกหวานน้อย 1 แก้ว`;
+                renderConfirmationList(mealInput.value);
+            }
+            
+            // Draw initial empty chart
+            updateRadarChart([0, 0, 0, 0], NUTRIENTS.map(n => n.label), NUTRIENTS.map(n => n.color));
+            
+             // Reset detailed panels
+             document.getElementById('detailedList').innerHTML = '<p class="col-span-4 text-center text-gray-500">รอผลการวิเคราะห์</p>';
+             document.getElementById('reduceContent').innerHTML = '<p class="text-sm text-gray-500">รอผลการวิเคราะห์</p>';
+             document.getElementById('increaseContent').innerHTML = '<p class="text-sm text-gray-500">รอผลการวิเคราะห์</p>';
+             document.getElementById('totalCalories').textContent = '0';
+        }
+
+        window.onload = initializeApp;
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Netlify Configuration File
+
+[build]
+  # 1. กำหนดให้ Netlify รู้ว่า Serverless Functions อยู่ในโฟลเดอร์ 'api'
+  functions = "api" 
+  # 2. กำหนดให้ Netlify เผยแพร่ไฟล์ Frontend (index.html) จาก Root Directory
+  publish = "."
+
+# 3. ตั้งค่า Rewrite Rule เพื่อเปลี่ยนเส้นทาง /api/analyze-nutri 
+#    ให้ชี้ไปยัง Serverless Function จริง
+[[redirects]]
+  # จาก: URL ที่ Frontend เรียกใช้
+  from = "/api/analyze-nutri"
+  # ไปยัง: ตำแหน่งจริงของ Netlify Function
+  to = "/.netlify/functions/analyze-nutri"
+  # สถานะ 200 (Rewrite) คือการส่งต่อคำขอโดยที่ URL ใน Browser ไม่เปลี่ยน
+  status = 200

@@ -7,7 +7,7 @@
 
 // Replace with your actual Gemini API Key from Netlify Environment Variables
 // Netlify will automatically inject this environment variable called GEMINI_API_KEY.
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY; 
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "food-1234"; 
 const MODEL_NAME = 'gemini-2.5-flash-preview-09-2025';
 
 // Define the structured JSON output the model must follow
